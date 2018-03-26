@@ -8,7 +8,7 @@ For recurring management tasks build several scripts an run them via **cron**.
 
 ## Examples
 
-Please see **examples.py** for example tasks that MeisterTaskButler can do for you. Please note that all those examples use sample values. If you run these without modification **they will not work**.
+Please see **example.py** for example tasks that MeisterTaskButler can do for you. Please note that all those examples use sample values. If you run these without modification **they will not work**.
 
 ## Obtain API Access Token
 
