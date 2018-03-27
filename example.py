@@ -30,3 +30,6 @@ mtb.createTaskRelativeDueDate("YOUR-PROJECT", "YOUR-SECTION", "YOUR-TASK-NAME", 
 
 # check for idle tasks and comment on them
 mtb.commentOnIdleTasks("YOUR-PROJECT", "months", 2, "Task has been idle for 2 months now. Please check!")
+
+# check for idle tasks and send notification mail to assignee
+mtb.notifyAssigneesOnIdleTasks("YOUR-PROJECT", "months", 2, "Found idle task", "MeisterTaskButler <your-email@address.com>", "Found an idle task that has not been updated for 2 months now.")
