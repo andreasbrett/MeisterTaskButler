@@ -17,7 +17,7 @@ def sendMail(toAddresses, fromAddress, mailSubject, mailBodyHtml, server = "loca
 	oMessage['Subject'] = mailSubject
 	
 	# set mail body
-	oMessage.attach(MIMEText(mailBodyHtml), 'html')
+	oMessage.attach(MIMEText(mailBodyHtml, 'html'))
 
 	# send mail
 	smtp = smtplib.SMTP(server)
