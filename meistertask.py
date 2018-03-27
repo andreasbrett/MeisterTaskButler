@@ -311,10 +311,10 @@ class mtb:
 				
 				# add task
 				print "Creating task '" + taskName + "'"
-				result = self.makeApiRequest(mtb.uriSectionTasks.replace("%ID%", str(section["id"])), None, None, taskParameters)
-				if result:
+				taskCreated = self.makeApiRequest(mtb.uriSectionTasks.replace("%ID%", str(section["id"])), None, None, taskParameters)
+				if taskCreated:
 					# add comment for change
-					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(result["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "createTask")})
+					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(taskCreated["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "createTask")})
 					print " --> SUCCESS"
 				else:
 					print " --> ERROR"
@@ -373,4 +373,7 @@ class mtb:
 					print "Notifying assignee '" + assignee["firstname"] + " " + assignee["lastname"] + " <" + assignee["email"] + ">' about task '" + idleTask["name"] + "'"
 					mailBodyHtml = "<p><b>" + comment + "</b></p><p><a href=""https://www.meistertask.com/app/task/" + idleTask["token"] + " "">" + idleTask["name"] + "</a></p>"
 					smtp.sendMail({assignee["email"]}, mailFrom, mailSubject, mailBodyHtml)
+					
+					# add comment for notification mail
+					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "notifyAssigneesOnIdleTasks")})
 					print " --> SUCCESS"
