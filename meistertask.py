@@ -351,3 +351,26 @@ class mtb:
 					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n" + comment})
 				
 				print " --> SUCCESS"
+	
+	def notifyAssigneesOnIdleTasks(self, projectName, idleUnit, idleValue, comment, mailFrom, mailSubject):
+		print
+		print "[notifyAssigneesOnIdleTasks] " + projectName + ", " + str(idleValue) + " " + idleUnit + ", " + comment
+
+		# fetch unassigned tasks for project
+		idleTasks = self.getIdleTasks(projectName, idleUnit, idleValue)
+		if idleTasks is None:
+			print "no idle tasks"
+		else:
+			# iterate over unassigned tasks
+			for idleTask in idleTasks:
+				
+				# check if there's an assignee
+				if idleTask["assigned_to_id"]:
+					# fetch assignee
+					assignee = self.makeApiRequest(mtb.uriPerson.replace("%ID%", str(idleTask["assigned_to_id"])))
+					
+					# notify assignee
+					print "Notifying assignee '" + assignee["firstname"] + " " + assignee["lastname"] + " <" + assignee["email"] + ">' about task '" + idleTask["name"] + "'"
+					mailBodyHtml = "<p><b>" + comment + "</b></p><p><a href=""https://www.meistertask.com/app/task/" + idleTask["token"] + " "">" + idleTask["name"] + "</a></p>"
+					smtp.sendMail({assignee["email"]}, mailFrom, mailSubject, mailBodyHtml)
+					print " --> SUCCESS"
