@@ -4,7 +4,7 @@ MeisterTask is a wonderful project management tool based on the Kanban approach.
 
 MTB offers several ways to manage your tasks and projects in an automated way. You can create tasks, assign them to users, mark them as completed once they reach a specific section or archive all the completed tasks.
 
-For recurring management tasks build several scripts an run them via **cron**.
+For recurring management tasks build several scripts and run them via **cron**.
 
 ## Examples
 
