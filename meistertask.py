@@ -26,6 +26,7 @@ class mtb:
 	uriSectionTasks = "https://www.meistertask.com/api/sections/%ID%/tasks"
 	uriTasks = "https://www.meistertask.com/api/tasks/%ID%"
 	uriTasksComments = "https://www.meistertask.com/api/tasks/%ID%/comments"
+	uriPerson = "https://www.meistertask.com/api/persons/%ID%"
 
 
 
@@ -78,6 +79,13 @@ class mtb:
 		# return json data
 		return json.loads(data)
 
+	def getProjectsList(self):
+		projects = self.makeApiRequest(mtb.uriProjects, {"status": "active"})
+		result = []
+		for project in projects:
+			result.append(project["name"])
+		return result
+		
 	def getProject(self, projectName):
 		projects = self.makeApiRequest(mtb.uriProjects, {"status": "active"})
 		for project in projects:
@@ -125,18 +133,44 @@ class mtb:
 			print "Could not find project '" + projectName + "'"
 		else:
 			# fetch all open tasks from the project we just found
-			tasks = self.makeApiRequest(mtb.uriProjectTasks.replace("%ID%", str(project["id"])), {"status":"open"})
-			if tasks is None:
+			openTasks = self.makeApiRequest(mtb.uriProjectTasks.replace("%ID%", str(project["id"])), {"status":"open"})
+			if openTasks is None:
 				print "There are no open tasks in '" + projectName + "'"
 			else:
 				# define result
 				result = []
 				
 				# iterate over all tasks
-				for task in tasks:
+				for openTask in openTasks:
 					# only use tasks that are unassigned
-					if task["assigned_to_id"] is None:
-						result.append(task)
+					if openTask["assigned_to_id"] is None:
+						result.append(openTask)
+
+				return result
+		return None
+	
+	def getIdleTasks(self, projectName, idleUnit = "months", idleValue = 1):
+		project = self.getProject(projectName)
+		if project is None:
+			print "Could not find project '" + projectName + "'"
+		else:
+			# fetch all open tasks from the project we just found
+			openTasks = self.makeApiRequest(mtb.uriProjectTasks.replace("%ID%", str(project["id"])), {"status":"open"})
+			if openTasks is None:
+				print "There are no open tasks in '" + projectName + "'"
+			else:
+				# define result
+				result = []
+				
+				# calculate idle date
+				dateIdleBorder = datetime.datetime.now() - datetime.timedelta(**{idleUnit:idleValue})
+				
+				# iterate over all tasks
+				for openTask in openTasks:
+					# only use tasks that are idle for a specific amount of time
+					dateTaskUpdated = datetime.datetime.strptime(openTask["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ")
+					if dateTaskUpdated < dateIdleBorder:
+						result.append(openTask)
 
 				return result
 		return None
@@ -296,3 +330,24 @@ class mtb:
 		
 		# run createTask method with calculated timestamp
 		self.createTask(projectName, sectionName, taskName, taskNotes, taskAssigneeFirstName, taskAssigneeLastName, taskDue, taskDueLocation)
+	
+	def commentOnIdleTasks(self, projectName, idleUnit, idleValue, comment):
+		print
+		print "[commentOnIdleTasks] " + projectName + ", " + str(idleValue) + " " + idleUnit + ", " + comment
+
+		# fetch unassigned tasks for project
+		idleTasks = self.getIdleTasks(projectName, idleUnit, idleValue)
+		if idleTasks is None:
+			print "no idle tasks"
+		else:
+			# iterate over unassigned tasks
+			for idleTask in idleTasks:
+				print "Commenting task '" + idleTask["name"] + "'"
+				
+				# check if there's an assignee
+				if idleTask["assigned_to_id"]:
+					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n <person_id>" + str(idleTask["assigned_to_id"]) + "</person_id> " + comment})
+				else:
+					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n" + comment})
+				
+				print " --> SUCCESS"
