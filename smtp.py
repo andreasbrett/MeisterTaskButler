@@ -8,7 +8,7 @@ from email.Utils import COMMASPACE, formatdate
 from email import Encoders
 import os
 
-def sendMail(toAddresses, fromAddress, mailSubject, mailBody, server = "localhost"):
+def sendMail(toAddresses, fromAddress, mailSubject, mailBodyHtml, server = "localhost"):
 	# define mail's metadata
 	oMessage = MIMEMultipart()
 	oMessage['To'] = COMMASPACE.join(toAddresses)
@@ -17,7 +17,7 @@ def sendMail(toAddresses, fromAddress, mailSubject, mailBody, server = "localhos
 	oMessage['Subject'] = mailSubject
 	
 	# set mail body
-	oMessage.attach(MIMEText(mailBody))
+	oMessage.attach(MIMEText(mailBodyHtml), 'html')
 
 	# send mail
 	smtp = smtplib.SMTP(server)
