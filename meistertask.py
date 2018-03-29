@@ -72,12 +72,11 @@ class mtb:
 				else:
 					request = urllib2.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken})
 
-		# fetch response and decode
+		# fetch response
 		response = urllib2.urlopen(request).read()
-		data = response.decode("utf-8")
 		
 		# return json data
-		return json.loads(data)
+		return json.loads(response.decode("utf-8"))
 
 	def getProjectsList(self):
 		projects = self.makeApiRequest(mtb.uriProjects, {"status": "active"})
@@ -202,7 +201,7 @@ class mtb:
 				else:
 					# iterate over unassigned tasks
 					for unassignedTask in unassignedTasks:
-						print "Re-assigning task '" + unassignedTask["name"] + "'"
+						print "Re-assigning task '" + unassignedTask["name"].encode("utf-8") + "'"
 						# assign task to person
 						result = self.makeApiRequest(mtb.uriTasks.replace("%ID%", str(unassignedTask["id"])), None, {"assigned_to_id":str(person["id"])})
 						if result:
@@ -231,7 +230,7 @@ class mtb:
 				else:
 					# iterate over open tasks
 					for openTask in openTasks:
-						print "Marking task '" + openTask["name"] + "' completed"
+						print "Marking task '" + openTask["name"].encode("utf-8") + "' completed"
 						# mark task completed
 						result = self.makeApiRequest(mtb.uriTasks.replace("%ID%", str(openTask["id"])), None, {"status":"2"})
 						if result:
@@ -264,7 +263,7 @@ class mtb:
 					
 					# if this has been completed for "long enough"
 					if delta > minDelta:
-						print "Archiving task '" + completedTask["name"] + "'"
+						print "Archiving task '" + completedTask["name"].encode("utf-8") + "'"
 						# mark task completed
 						result = self.makeApiRequest(mtb.uriTasks.replace("%ID%", str(completedTask["id"])), None, {"status":"18"})
 						if result:
@@ -342,7 +341,7 @@ class mtb:
 		else:
 			# iterate over unassigned tasks
 			for idleTask in idleTasks:
-				print "Commenting task '" + idleTask["name"] + "'"
+				print "Commenting task '" + idleTask["name"].encode("utf-8") + "'"
 				
 				# check if there's an assignee
 				if idleTask["assigned_to_id"]:
@@ -370,8 +369,8 @@ class mtb:
 					assignee = self.makeApiRequest(mtb.uriPerson.replace("%ID%", str(idleTask["assigned_to_id"])))
 					
 					# notify assignee
-					print "Notifying assignee '" + assignee["firstname"] + " " + assignee["lastname"] + " <" + assignee["email"] + ">' about task '" + idleTask["name"] + "'"
-					mailBodyHtml = "<p><b>" + comment + "</b></p><p><a href=""https://www.meistertask.com/app/task/" + idleTask["token"] + " "">" + idleTask["name"] + "</a></p>"
+					print "Notifying assignee '" + assignee["firstname"] + " " + assignee["lastname"] + " <" + assignee["email"] + ">' about task '" + idleTask["name"].encode("utf-8") + "'"
+					mailBodyHtml = "<p><b>" + comment + "</b></p><p><a href=""https://www.meistertask.com/app/task/" + idleTask["token"] + " "">" + idleTask["name"].encode("utf-8") + "</a></p>"
 					smtp.sendMail({assignee["email"]}, mailFrom, mailSubject, mailBodyHtml)
 					
 					# add comment for notification mail
