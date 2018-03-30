@@ -24,8 +24,9 @@ class mtb:
 	uriProjectLabels = "https://www.meistertask.com/api/projects/%ID%/labels"
 	uriProjectPersons = "https://www.meistertask.com/api/projects/%ID%/persons"
 	uriSectionTasks = "https://www.meistertask.com/api/sections/%ID%/tasks"
-	uriTasks = "https://www.meistertask.com/api/tasks/%ID%"
-	uriTasksComments = "https://www.meistertask.com/api/tasks/%ID%/comments"
+	uriTasks = "https://www.meistertask.com/api/tasks"
+	uriTask = "https://www.meistertask.com/api/tasks/%ID%"
+	uriTaskComments = "https://www.meistertask.com/api/tasks/%ID%/comments"
 	uriPerson = "https://www.meistertask.com/api/persons/%ID%"
 
 
@@ -77,6 +78,31 @@ class mtb:
 		
 		# return json data
 		return json.loads(response.decode("utf-8"))
+
+	def saveTimestampUTC(self, timestamp, file):
+		try:
+			f = open(file, "w")
+			f.write(datetime.datetime.strftime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ"))
+			f.close()
+			return True
+		except:
+			return False
+
+	def loadTimestampUTC(self, file):
+		try:
+			f = open(file, "r")
+			return datetime.datetime.strptime(f.read(), "%Y-%m-%dT%H:%M:%S.%fZ")
+		except:
+			return datetime.datetime(1970, 1, 1)
+
+	def getLastUpdateUTC(self):
+		tasks = self.makeApiRequest(mtb.uriTasks)
+		lastUpdate = datetime.datetime(1970, 1, 1)
+		for task in tasks:
+			dateTaskUpdated = datetime.datetime.strptime(task["updated_at"], "%Y-%m-%dT%H:%M:%S.%fZ")
+			if dateTaskUpdated > lastUpdate:
+				lastUpdate = dateTaskUpdated
+		return lastUpdate
 
 	def getProjectsList(self):
 		projects = self.makeApiRequest(mtb.uriProjects, {"status": "active"})
@@ -203,10 +229,10 @@ class mtb:
 					for unassignedTask in unassignedTasks:
 						print "Re-assigning task '" + unassignedTask["name"].encode("utf-8") + "'"
 						# assign task to person
-						result = self.makeApiRequest(mtb.uriTasks.replace("%ID%", str(unassignedTask["id"])), None, {"assigned_to_id":str(person["id"])})
+						result = self.makeApiRequest(mtb.uriTask.replace("%ID%", str(unassignedTask["id"])), None, {"assigned_to_id":str(person["id"])})
 						if result:
 							# add comment for change
-							self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(unassignedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "assignUnassignedTasksToPerson")})
+							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(unassignedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "assignUnassignedTasksToPerson")})
 							print " --> SUCCESS"
 						else:
 							print " --> ERROR"
@@ -232,10 +258,10 @@ class mtb:
 					for openTask in openTasks:
 						print "Marking task '" + openTask["name"].encode("utf-8") + "' completed"
 						# mark task completed
-						result = self.makeApiRequest(mtb.uriTasks.replace("%ID%", str(openTask["id"])), None, {"status":"2"})
+						result = self.makeApiRequest(mtb.uriTask.replace("%ID%", str(openTask["id"])), None, {"status":"2"})
 						if result:
 							# add comment for change
-							self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(openTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "markTasksCompleted")})
+							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(openTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "markTasksCompleted")})
 							print " --> SUCCESS"
 						else:
 							print " --> ERROR"
@@ -265,10 +291,10 @@ class mtb:
 					if delta > minDelta:
 						print "Archiving task '" + completedTask["name"].encode("utf-8") + "'"
 						# mark task completed
-						result = self.makeApiRequest(mtb.uriTasks.replace("%ID%", str(completedTask["id"])), None, {"status":"18"})
+						result = self.makeApiRequest(mtb.uriTask.replace("%ID%", str(completedTask["id"])), None, {"status":"18"})
 						if result:
 							# add comment for change
-							self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(completedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "archiveCompletedTasks")})
+							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(completedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "archiveCompletedTasks")})
 							print " --> SUCCESS"
 						else:
 							print " --> ERROR"
@@ -313,7 +339,7 @@ class mtb:
 				taskCreated = self.makeApiRequest(mtb.uriSectionTasks.replace("%ID%", str(section["id"])), None, None, taskParameters)
 				if taskCreated:
 					# add comment for change
-					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(taskCreated["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "createTask")})
+					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(taskCreated["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "createTask")})
 					print " --> SUCCESS"
 				else:
 					print " --> ERROR"
@@ -345,9 +371,9 @@ class mtb:
 				
 				# check if there's an assignee
 				if idleTask["assigned_to_id"]:
-					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n <person_id>" + str(idleTask["assigned_to_id"]) + "</person_id> " + comment})
+					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n <person_id>" + str(idleTask["assigned_to_id"]) + "</person_id> " + comment})
 				else:
-					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n" + comment})
+					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n" + comment})
 				
 				print " --> SUCCESS"
 	
@@ -374,5 +400,5 @@ class mtb:
 					smtp.sendMail({assignee["email"]}, mailFrom, mailSubject, mailBodyHtml)
 					
 					# add comment for notification mail
-					self.makeApiRequest(mtb.uriTasksComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "notifyAssigneesOnIdleTasks")})
+					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "notifyAssigneesOnIdleTasks")})
 					print " --> SUCCESS"
