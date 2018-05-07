@@ -36,15 +36,20 @@ class mtb:
 	# ================================================================================================================
 	#  CONSTRUCTOR
 	# ================================================================================================================
-	def __init__(self, apiAccessToken, location = "Berlin"):
+	def __init__(self, apiAccessToken, location = "Berlin", TelegramBot = None):
 		self.apiAccessToken = apiAccessToken
 		self.location = location
+		self.TelegramBot = TelegramBot
 
 
 
 	# ================================================================================================================
 	#  BASIC FUNCTIONS
 	# ================================================================================================================
+	def sendTelegram(self, message):
+		if self.TelegramBot:
+			self.TelegramBot.sendMessage(message)
+
 	def getLocalTimezoneOffset(self, location):
 		request = urllib2.Request("https://timezoneapi.io/api/address/?" + location)
 		response = urllib2.urlopen(request).read()
@@ -234,8 +239,10 @@ class mtb:
 							# add comment for change
 							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(unassignedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "assignUnassignedTasksToPerson")})
 							print " --> SUCCESS"
+							self.sendTelegram("[" + projectName + "] Re-assigning task '" + unassignedTask["name"].encode("utf-8") + "' to " + personFirstname + " " + personLastname)
 						else:
 							print " --> ERROR"
+							self.sendTelegram("[" + projectName + "] ERROR re-assigning task '" + unassignedTask["name"].encode("utf-8") + "' to " + personFirstname + " " + personLastname)
 
 	def markTasksCompleted(self, projectName, sectionName):
 		print
@@ -341,8 +348,10 @@ class mtb:
 					# add comment for change
 					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(taskCreated["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "createTask")})
 					print " --> SUCCESS"
+					self.sendTelegram("[" + projectName + "] Created task '" + taskName + "' in Section '" + sectionName + "'")
 				else:
 					print " --> ERROR"
+					self.sendTelegram("[" + projectName + "] ERROR creating task '" + taskName + "' in Section '" + sectionName + "'")
 	
 	def createTaskRelativeDueDate(self, projectName, sectionName, taskName, taskNotes = "", taskAssigneeFirstName = "", taskAssigneeLastName = "", taskDueUnit = "hours", taskDueValue = 8, taskDueLocation = None):
 				
