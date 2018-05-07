@@ -5,6 +5,11 @@ import sys, meistertask
 # create MeisterTaskButler object
 mtb = meistertask.mtb("ENTER-YOUR-ACCESS-TOKEN-HERE", "London")
 
+# create MeisterTaskButler object with TelegramBot support (see https://github.com/andreasbrett/TelegramBot)
+#  -> will send some notifications via Telegram
+tgb = TelegramBot.tgb("ENTER-YOUR-ACCESS-TOKEN", "ENTER-YOUR-GLOBAL-CHAT-ID-HERE")
+mtb_tgb = meistertask.mtb("ENTER-YOUR-ACCESS-TOKEN-HERE", "London", tgb)
+
 # get a list of all active projects and iterate over them
 projects = mtb.getProjectsList()
 for project in projects:
