@@ -239,10 +239,10 @@ class mtb:
 							# add comment for change
 							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(unassignedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "assignUnassignedTasksToPerson")})
 							print " --> SUCCESS"
-							self.sendTelegram("[" + projectName + "]\nRe-assigning task '" + unassignedTask["name"].encode("utf-8") + "' to " + personFirstname + " " + personLastname)
+							self.sendTelegram("[" + projectName + "]\nRe-assigned task '" + unassignedTask["name"] + "' to " + personFirstname + " " + personLastname)
 						else:
 							print " --> ERROR"
-							self.sendTelegram("[" + projectName + "]\nERROR re-assigning task '" + unassignedTask["name"].encode("utf-8") + "' to " + personFirstname + " " + personLastname)
+							self.sendTelegram("[" + projectName + "]\nERROR re-assigning task '" + unassignedTask["name"] + "' to " + personFirstname + " " + personLastname)
 
 	def markTasksCompleted(self, projectName, sectionName):
 		print
