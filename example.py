@@ -13,7 +13,7 @@ mtb_tgb = meistertask.mtb("ENTER-YOUR-ACCESS-TOKEN-HERE", "London", tgb)
 # get a list of all active projects and iterate over them
 projects = mtb.getProjectsList()
 for project in projects:
-    print project
+    print(project)
 
 # assign currently unassigned tasks to "John Doe"
 mtb.assignUnassignedTasksToPerson("YOUR-PROJECT", "John", "Doe")
