@@ -8,7 +8,10 @@
     :license: GNU General Public License v3.0, see LICENSE for more details
 """
 
-import urllib, urllib2, json, datetime, smtp
+import json, datetime
+import urllib.request
+import urllib.error
+from .smtp import sendMail
 
 
 class mtb:
@@ -59,35 +62,39 @@ class mtb:
 			self.TelegramBot.sendMessage(message)
 
 	def getLocalTimezoneOffset(self, location):
-		request = urllib2.Request("https://timezoneapi.io/api/address/?" + location)
-		response = urllib2.urlopen(request).read()
-		data = json.loads(response.decode("utf-8"))
+#		---------------------------------------
+#		timezoneapi.io not available any longer
+#		---------------------------------------
+#		request = urllib.request.Request("https://timezoneapi.io/api/address/?" + location)
+#		response = urllib.request.urlopen(request).read()
+#		data = json.loads(response.decode("utf-8"))
 
-		if data["data"]["addresses_found"] < 1:
-			return None
-		else:
-			return data["data"]["addresses"][0]["datetime"]["offset_gmt"]
+#		if data["data"]["addresses_found"] < 1:
+#			return None
+#		else:
+#			return data["data"]["addresses"][0]["datetime"]["offset_gmt"]
+		return "+02:00"
 
 	def makeApiRequest(self, apiUri, queryParams = None, bodyParams = None, bodyParamsPost = None):
 		# build request if queryParams are present
 		if queryParams:
-			uri = apiUri + "?" + urllib.urlencode(queryParams)
-			request = urllib2.Request(uri, headers={"Authorization" : "Bearer " + self.apiAccessToken})
+			uri = apiUri + "?" + urllib.parse.urlencode(queryParams)
+			request = urllib.request.Request(uri, headers={"Authorization" : "Bearer " + self.apiAccessToken})
 		else:
 			# build request if bodyParams are present
 			if bodyParams:
-				request = urllib2.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=urllib.urlencode(bodyParams))
+				request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=urllib.parse.urlencode(bodyParams))
 				request.get_method = lambda: "PUT"
 			else:
 				# build request if bodyParamsPost are present
 				if bodyParamsPost:
-					request = urllib2.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=urllib.urlencode(bodyParamsPost))
+					request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=urllib.parse.urlencode(bodyParamsPost))
 				# build request if none of them are present
 				else:
-					request = urllib2.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken})
+					request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken})
 
 		# fetch response
-		response = urllib2.urlopen(request).read()
+		response = urllib.request.urlopen(request).read()
 		
 		# return json data
 		return json.loads(response.decode("utf-8"))
@@ -168,12 +175,12 @@ class mtb:
 	def getUnassignedTasks(self, projectName):
 		project = self.getProject(projectName)
 		if project is None:
-			print "Could not find project '" + projectName + "'"
+			print("Could not find project '" + projectName + "'")
 		else:
 			# fetch all open tasks from the project we just found
 			openTasks = self.makeApiRequest(mtb.uriProjectTasks.replace("%ID%", str(project["id"])), {"status":"open"})
 			if openTasks is None:
-				print "There are no open tasks in '" + projectName + "'"
+				print("There are no open tasks in '" + projectName + "'")
 			else:
 				# define result
 				result = []
@@ -190,12 +197,12 @@ class mtb:
 	def getIdleTasks(self, projectName, idleUnit = "months", idleValue = 1):
 		project = self.getProject(projectName)
 		if project is None:
-			print "Could not find project '" + projectName + "'"
+			print("Could not find project '" + projectName + "'")
 		else:
 			# fetch all open tasks from the project we just found
 			openTasks = self.makeApiRequest(mtb.uriProjectTasks.replace("%ID%", str(project["id"])), {"status":"open"})
 			if openTasks is None:
-				print "There are no open tasks in '" + projectName + "'"
+				print("There are no open tasks in '" + projectName + "'")
 			else:
 				# define result
 				result = []
@@ -221,69 +228,69 @@ class mtb:
 	#  ADVANCED FUNCTIONS
 	# ================================================================================================================
 	def assignUnassignedTasksToPerson(self, projectName, personFirstname, personLastname):
-		print
-		print "[assignUnassignedTasksToPerson] " + projectName + ", " + personFirstname + " " + personLastname
+		print()
+		print("[assignUnassignedTasksToPerson] " + projectName + ", " + personFirstname + " " + personLastname)
 		
 		project = self.getProject(projectName)
 		if project is None:
-			print "Could not find project '" + projectName + "'"
+			print("Could not find project '" + projectName + "'")
 		else:
 			# find person
 			person = self.getProjectPerson(project["id"], personFirstname, personLastname)
 			if person is None:
-				print "Could not find person '" + personFirstname + " " + personLastname + "'"
+				print("Could not find person '" + personFirstname + " " + personLastname + "'")
 			else:
 				# fetch unassigned tasks for project
 				unassignedTasks = self.getUnassignedTasks(projectName)
 				if unassignedTasks is None:
-					print "no unassigned tasks"
+					print("no unassigned tasks")
 				else:
 					# iterate over unassigned tasks
 					for unassignedTask in unassignedTasks:
-						print "Re-assigning task '" + unassignedTask["name"].encode("utf-8") + "'"
+						print("Re-assigning task '" + unassignedTask["name"].encode("utf-8") + "'")
 						# assign task to person
 						result = self.makeApiRequest(mtb.uriTask.replace("%ID%", str(unassignedTask["id"])), None, {"assigned_to_id":str(person["id"])})
 						if result:
 							# add comment for change
 							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(unassignedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "assignUnassignedTasksToPerson")})
-							print " --> SUCCESS"
+							print(" --> SUCCESS")
 							self.sendTelegram("[" + projectName + "]\nRe-assigned task '" + unassignedTask["name"] + "' to " + personFirstname + " " + personLastname)
 						else:
-							print " --> ERROR"
+							print(" --> ERROR")
 							self.sendTelegram("[" + projectName + "]\nERROR re-assigning task '" + unassignedTask["name"] + "' to " + personFirstname + " " + personLastname)
 
 	def markTasksCompleted(self, projectName, sectionName):
-		print
-		print "[markTasksCompleted] " + projectName + " / " + sectionName
+		print()
+		print("[markTasksCompleted] " + projectName + " / " + sectionName)
 		
 		project = self.getProject(projectName)
 		if project is None:
-			print "Could not find project '" + projectName + "'"
+			print("Could not find project '" + projectName + "'")
 		else:
 			section = self.getProjectSection(project["id"], sectionName)
 			if section is None:
-				print "Could not find section '" + sectionName + "' in project '" + projectName + "'"
+				print("Could not find section '" + sectionName + "' in project '" + projectName + "'")
 			else:
 				# fetch all open tasks from the section we just found
 				openTasks = self.makeApiRequest(mtb.uriSectionTasks.replace("%ID%", str(section["id"])), {"status":"open"})
 				if openTasks is None:
-					print "There are no open tasks in section '" + sectionName + "' of project '" + projectName + "'"
+					print("There are no open tasks in section '" + sectionName + "' of project '" + projectName + "'")
 				else:
 					# iterate over open tasks
 					for openTask in openTasks:
-						print "Marking task '" + openTask["name"].encode("utf-8") + "' completed"
+						print("Marking task '" + openTask["name"].encode("utf-8") + "' completed")
 						# mark task completed
 						result = self.makeApiRequest(mtb.uriTask.replace("%ID%", str(openTask["id"])), None, {"status":"2"})
 						if result:
 							# add comment for change
 							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(openTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "markTasksCompleted")})
-							print " --> SUCCESS"
+							print(" --> SUCCESS")
 						else:
-							print " --> ERROR"
+							print(" --> ERROR")
 			
 	def archiveCompletedTasks(self, projectName, daysSinceLastChange = 14):
-		print
-		print "[archiveCompletedTasks] " + projectName + ", " + str(daysSinceLastChange) + " days"
+		print()
+		print("[archiveCompletedTasks] " + projectName + ", " + str(daysSinceLastChange) + " days")
 		
 		# define now and the minimum delta
 		now = datetime.datetime.now()
@@ -291,11 +298,11 @@ class mtb:
 		
 		project = self.getProject(projectName)
 		if project is None:
-			print "Could not find project '" + projectName + "'"
+			print("Could not find project '" + projectName + "'")
 		else:
 			completedTasks = self.makeApiRequest(mtb.uriProjectTasks.replace("%ID%", str(project["id"])), {"status":"completed"})
 			if completedTasks is None:
-				print "There are no completed tasks in '" + projectName + "'"
+				print("There are no completed tasks in '" + projectName + "'")
 			else:
 				# iterate over all tasks
 				for completedTask in completedTasks:
@@ -304,30 +311,30 @@ class mtb:
 					
 					# if this has been completed for "long enough"
 					if delta > minDelta:
-						print "Archiving task '" + completedTask["name"].encode("utf-8") + "'"
+						print("Archiving task '" + completedTask["name"].encode("utf-8") + "'")
 						# mark task completed
 						result = self.makeApiRequest(mtb.uriTask.replace("%ID%", str(completedTask["id"])), None, {"status":"18"})
 						if result:
 							# add comment for change
 							self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(completedTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "archiveCompletedTasks")})
-							print " --> SUCCESS"
+							print(" --> SUCCESS")
 						else:
-							print " --> ERROR"
+							print(" --> ERROR")
 							
 	def createTask(self, projectName, sectionName, taskName, taskNotes = "", taskAssigneeFirstName = "", taskAssigneeLastName = "", taskDue = None, taskDueLocation = None):
-		print
-		print "[createTask] " + projectName + " / " + sectionName + ", " + taskName + ", " + taskNotes + ", " + taskAssigneeFirstName + " " + taskAssigneeLastName + ", " + str(taskDue)
+		print()
+		print("[createTask] " + projectName + " / " + sectionName + ", " + taskName + ", " + taskNotes + ", " + taskAssigneeFirstName + " " + taskAssigneeLastName + ", " + str(taskDue))
 		
 		if taskDueLocation is None:
 			taskDueLocation = self.location
 		
 		project = self.getProject(projectName)
 		if project is None:
-			print "Could not find project '" + projectName + "'"
+			print("Could not find project '" + projectName + "'")
 		else:
 			section = self.getProjectSection(project["id"], sectionName)
 			if section is None:
-				print "Could not find section '" + sectionName + "' in project '" + projectName + "'"
+				print("Could not find section '" + sectionName + "' in project '" + projectName + "'")
 			else:
 				
 				# define parameters
@@ -343,22 +350,22 @@ class mtb:
 					if person:
 						taskParameters["assigned_to_id"] = person["id"]
 					else:
-						print "Could not find Assignee '" + taskAssigneeFirstName + " " + taskAssigneeLastName + "'"
+						print("Could not find Assignee '" + taskAssigneeFirstName + " " + taskAssigneeLastName + "'")
 				
 				# format due date
 				if taskDue:
 					taskParameters["due"] = taskDue + self.getLocalTimezoneOffset(taskDueLocation)
 				
 				# add task
-				print "Creating task '" + taskName + "'"
+				print("Creating task '" + taskName + "'")
 				taskCreated = self.makeApiRequest(mtb.uriSectionTasks.replace("%ID%", str(section["id"])), None, None, taskParameters)
 				if taskCreated:
 					# add comment for change
 					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(taskCreated["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "createTask")})
-					print " --> SUCCESS"
+					print(" --> SUCCESS")
 					self.sendTelegram("[" + projectName + "]\nCreated task '" + taskName + "' in Section '" + sectionName + "'")
 				else:
-					print " --> ERROR"
+					print(" --> ERROR")
 					self.sendTelegram("[" + projectName + "]\nERROR creating task '" + taskName + "' in Section '" + sectionName + "'")
 	
 	def createTaskRelativeDueDate(self, projectName, sectionName, taskName, taskNotes = "", taskAssigneeFirstName = "", taskAssigneeLastName = "", taskDueUnit = "hours", taskDueValue = 8, taskDueLocation = None):
@@ -374,17 +381,17 @@ class mtb:
 		self.createTask(projectName, sectionName, taskName, taskNotes, taskAssigneeFirstName, taskAssigneeLastName, taskDue, taskDueLocation)
 	
 	def commentOnIdleTasks(self, projectName, idleUnit, idleValue, comment):
-		print
-		print "[commentOnIdleTasks] " + projectName + ", " + str(idleValue) + " " + idleUnit + ", " + comment
+		print()
+		print("[commentOnIdleTasks] " + projectName + ", " + str(idleValue) + " " + idleUnit + ", " + comment)
 
 		# fetch unassigned tasks for project
 		idleTasks = self.getIdleTasks(projectName, idleUnit, idleValue)
 		if idleTasks is None:
-			print "no idle tasks"
+			print("no idle tasks")
 		else:
 			# iterate over unassigned tasks
 			for idleTask in idleTasks:
-				print "Commenting task '" + idleTask["name"].encode("utf-8") + "'"
+				print("Commenting task '" + idleTask["name"].encode("utf-8") + "'")
 				
 				# check if there's an assignee
 				if idleTask["assigned_to_id"]:
@@ -392,16 +399,16 @@ class mtb:
 				else:
 					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "commentOnIdleTasks") + "\n\n" + comment})
 				
-				print " --> SUCCESS"
+				print(" --> SUCCESS")
 	
 	def notifyAssigneesOnIdleTasks(self, projectName, idleUnit, idleValue, comment, mailFrom, mailSubject):
-		print
-		print "[notifyAssigneesOnIdleTasks] " + projectName + ", " + str(idleValue) + " " + idleUnit + ", " + comment
+		print()
+		print("[notifyAssigneesOnIdleTasks] " + projectName + ", " + str(idleValue) + " " + idleUnit + ", " + comment)
 
 		# fetch unassigned tasks for project
 		idleTasks = self.getIdleTasks(projectName, idleUnit, idleValue)
 		if idleTasks is None:
-			print "no idle tasks"
+			print("no idle tasks")
 		else:
 			# iterate over unassigned tasks
 			for idleTask in idleTasks:
@@ -412,10 +419,10 @@ class mtb:
 					assignee = self.makeApiRequest(mtb.uriPerson.replace("%ID%", str(idleTask["assigned_to_id"])))
 					
 					# notify assignee
-					print "Notifying assignee '" + assignee["firstname"] + " " + assignee["lastname"] + " <" + assignee["email"] + ">' about task '" + idleTask["name"].encode("utf-8") + "'"
+					print("Notifying assignee '" + assignee["firstname"] + " " + assignee["lastname"] + " <" + assignee["email"] + ">' about task '" + idleTask["name"].encode("utf-8") + "'")
 					mailBodyHtml = "<p><b>" + comment + "</b></p><p><a href=""https://www.meistertask.com/app/task/" + idleTask["token"] + " "">" + idleTask["name"].encode("utf-8") + "</a></p>"
 					smtp.sendMail({assignee["email"]}, mailFrom, mailSubject, mailBodyHtml)
 					
 					# add comment for notification mail
 					self.makeApiRequest(mtb.uriTaskComments.replace("%ID%", str(idleTask["id"])), None, None, {"text":mtb.comment.replace("%TEXT%", "notifyAssigneesOnIdleTasks")})
-					print " --> SUCCESS"
+					print(" --> SUCCESS")
