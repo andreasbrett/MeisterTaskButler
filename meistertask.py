@@ -83,12 +83,14 @@ class mtb:
 		else:
 			# build request if bodyParams are present
 			if bodyParams:
-				request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=urllib.parse.urlencode(bodyParams))
+				binary_data = (urllib.parse.urlencode(bodyParams)).encode("utf8")
+				request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=binary_data)
 				request.get_method = lambda: "PUT"
 			else:
 				# build request if bodyParamsPost are present
 				if bodyParamsPost:
-					request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=urllib.parse.urlencode(bodyParamsPost))
+					binary_data = (urllib.parse.urlencode(bodyParamsPost)).encode("utf8")
+					request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken}, data=binary_data)
 				# build request if none of them are present
 				else:
 					request = urllib.request.Request(apiUri, headers={"Authorization" : "Bearer " + self.apiAccessToken})
